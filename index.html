@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Place</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #FF006E;
+            --secondary: #8338EC;
+            --accent: #FFBE0B;
+            --bg: #0D1117;
+            --surface: #161B22;
+            --text: #F0F6FC;
+            --border: #30363D;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 0, 110, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(131, 56, 236, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 0;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 4rem;
+            letter-spacing: 0.1em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 3s ease-in-out infinite alternate;
+            text-shadow: 0 0 30px rgba(255, 0, 110, 0.5);
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 10px rgba(255, 0, 110, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(131, 56, 236, 0.8)); }
+        }
+
+        .controls {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .color-btn {
+            width: 100%;
+            height: 45px;
+            border: 3px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+
+        .color-btn.selected {
+            border-color: var(--accent);
+            transform: scale(1.15);
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        .timer-info {
+            text-align: center;
+            font-size: 1.1rem;
+            padding: 15px;
+            background: rgba(255, 0, 110, 0.1);
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+        }
+
+        .timer-info.ready {
+            background: rgba(255, 190, 11, 0.1);
+            border-color: var(--accent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        #pixelCanvas {
+            border: 3px solid var(--primary);
+            cursor: crosshair;
+            image-rendering: pixelated;
+            box-shadow: 0 0 40px rgba(255, 0, 110, 0.3);
+        }
+
+        .admin-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(131, 56, 236, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .admin-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(131, 56, 236, 0.6);
+        }
+
+        .admin-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            z-index: 2000;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .admin-panel.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1999;
+            backdrop-filter: blur(5px);
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        .admin-panel h2 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .admin-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+        }
+
+        .admin-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .admin-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .admin-btn:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(131, 56, 236, 0.4);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: var(--border);
+            transform: rotate(90deg);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: #8B949E;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .color-palette {
+                grid-template-columns: repeat(8, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="container">
+        <header>
+            <h1>PIXEL PLACE</h1>
+        </header>
+
+        <div class="controls">
+            <div class="color-palette" id="colorPalette"></div>
+            <div class="timer-info" id="timerInfo">
+                Wähle eine Farbe und klicke auf die Leinwand
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="pixelCanvas"></canvas>
+        </div>
+    </div>
+
+    <button class="admin-toggle" onclick="showAdminPanel()">⚙️ ADMIN</button>
+
+    <div class="admin-panel" id="adminPanel">
+        <button class="close-btn" onclick="closeAdminPanel()">×</button>
+        <h2>Admin Panel</h2>
+        
+        <div id="loginForm">
+            <label>Passwort</label>
+            <input type="password" id="adminPassword" class="admin-input" placeholder="Passwort eingeben">
+            <button class="admin-btn" onclick="login()">Anmelden</button>
+        </div>
+
+        <div id="adminControls" style="display: none;">
+            <label>Wartezeit (Sekunden)</label>
+            <p class="info-text">Zeit zwischen Pixel-Platzierungen</p>
+            <input type="number" id="cooldownInput" class="admin-input" min="1" value="300">
+            
+            <label>Map-Größe (Pixel)</label>
+            <p class="info-text">Breite und Höhe der Leinwand</p>
+            <input type="number" id="mapSizeInput" class="admin-input" min="10" max="200" value="64">
+            
+            <button class="admin-btn" onclick="saveSettings()">Einstellungen Speichern</button>
+            <button class="admin-btn" style="background: #DC2626; margin-top: 5px;" onclick="clearCanvas()">Canvas Löschen</button>
+        </div>
+    </div>
+
+    <script>
+        const colors = [
+            '#FFFFFF', '#E4E4E4', '#888888', '#222222',
+            '#FFA7D1', '#E50000', '#E59500', '#A06A42',
+            '#E5D900', '#94E044', '#02BE01', '#00D3DD',
+            '#0083C7', '#0000EA', '#CF6EE4', '#820080'
+        ];
+
+        let canvas, ctx;
+        let selectedColor = colors[0];
+        let lastPlaceTime = 0;
+        let cooldownSeconds = 300;
+        let mapSize = 64;
+        let pixelSize = 8;
+        let isLoggedIn = false;
+
+        async function initCanvas() {
+            canvas = document.getElementById('pixelCanvas');
+            ctx = canvas.getContext('2d');
+            
+            const settings = await loadSettings();
+            cooldownSeconds = settings.cooldown;
+            mapSize = settings.mapSize;
+            
+            canvas.width = mapSize;
+            canvas.height = mapSize;
+            canvas.style.width = `${mapSize * pixelSize}px`;
+            canvas.style.height = `${mapSize * pixelSize}px`;
+            
+            await loadCanvas();
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        async function loadSettings() {
+            try {
+                const cooldownResult = await window.storage.get('settings-cooldown', true);
+                const mapSizeResult = await window.storage.get('settings-mapsize', true);
+                
+                return {
+                    cooldown: cooldownResult ? parseInt(cooldownResult.value) : 300,
+                    mapSize: mapSizeResult ? parseInt(mapSizeResult.value) : 64
+                };
+            } catch (error) {
+                return { cooldown: 300, mapSize: 64 };
+            }
+        }
+
+        async function saveSettings() {
+            if (!isLoggedIn) {
+                alert('Bitte zuerst anmelden!');
+                return;
+            }
+
+            const newCooldown = parseInt(document.getElementById('cooldownInput').value);
+            const newMapSize = parseInt(document.getElementById('mapSizeInput').value);
+
+            try {
+                await window.storage.set('settings-cooldown', newCooldown.toString(), true);
+                await window.storage.set('settings-mapsize', newMapSize.toString(), true);
+                
+                // If map size changed, clear the canvas data
+                if (newMapSize !== mapSize) {
+                    await window.storage.delete('canvas-data', true);
+                }
+                
+                alert('Einstellungen gespeichert! Seite wird neu geladen...');
+                location.reload();
+            } catch (error) {
+                alert('Fehler beim Speichern: ' + error.message);
+            }
+        }
+
+        async function loadCanvas() {
+            // First, always fill with white
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, mapSize, mapSize);
+            
+            // Then try to load saved data
+            try {
+                const result = await window.storage.get('canvas-data', true);
+                if (result) {
+                    const pixelData = JSON.parse(result.value);
+                    
+                    // Only load if data matches current map size
+                    const expectedLength = mapSize * mapSize * 4;
+                    if (pixelData.length === expectedLength) {
+                        const imageData = ctx.createImageData(mapSize, mapSize);
+                        for (let i = 0; i < pixelData.length; i++) {
+                            imageData.data[i] = pixelData[i];
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                    }
+                }
+            } catch (error) {
+                // If loading fails, canvas stays white
+                console.log('No saved canvas data or error loading:', error);
+            }
+        }
+
+        async function saveCanvas() {
+            const imageData = ctx.getImageData(0, 0, mapSize, mapSize);
+            const pixelData = Array.from(imageData.data);
+            
+            try {
+                await window.storage.set('canvas-data', JSON.stringify(pixelData), true);
+            } catch (error) {
+                console.error('Fehler beim Speichern:', error);
+            }
+        }
+
+        function createColorPalette() {
+            const palette = document.getElementById('colorPalette');
+            colors.forEach((color, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'color-btn';
+                btn.style.backgroundColor = color;
+                btn.onclick = () => selectColor(color, btn);
+                if (index === 0) btn.classList.add('selected');
+                palette.appendChild(btn);
+            });
+        }
+
+        function selectColor(color, btn) {
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedColor = color;
+        }
+
+        async function placePixel(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX);
+            const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+            const now = Date.now();
+            const timeSinceLastPlace = (now - lastPlaceTime) / 1000;
+
+            if (timeSinceLastPlace < cooldownSeconds) {
+                const remaining = Math.ceil(cooldownSeconds - timeSinceLastPlace);
+                alert(`Bitte warte noch ${remaining} Sekunden!`);
+                return;
+            }
+
+            ctx.fillStyle = selectedColor;
+            ctx.fillRect(x, y, 1, 1);
+            
+            lastPlaceTime = now;
+            await saveCanvas();
+            updateTimer();
+        }
+
+        function updateTimer() {
+            const timerInfo = document.getElementById('timerInfo');
+            const now = Date.now();
+            const timeSinceLastPlace = (now - lastPlaceTime) / 1000;
+            const remaining = Math.max(0, Math.ceil(cooldownSeconds - timeSinceLastPlace));
+
+            if (remaining > 0) {
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                timerInfo.textContent = `Nächster Pixel in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                timerInfo.classList.remove('ready');
+            } else {
+                timerInfo.textContent = '✨ Bereit! Platziere deinen Pixel!';
+                timerInfo.classList.add('ready');
+            }
+        }
+
+        function showAdminPanel() {
+            document.getElementById('adminPanel').classList.add('show');
+            document.getElementById('overlay').classList.add('show');
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('adminPanel').classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
+        }
+
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'zzz') {
+                isLoggedIn = true;
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminControls').style.display = 'block';
+                document.getElementById('cooldownInput').value = cooldownSeconds;
+                document.getElementById('mapSizeInput').value = mapSize;
+            } else {
+                alert('Falsches Passwort!');
+            }
+        }
+
+        async function clearCanvas() {
+            console.log('clearCanvas called');
+            console.log('isLoggedIn:', isLoggedIn);
+            
+            if (!isLoggedIn) {
+                alert('Bitte zuerst anmelden!');
+                return;
+            }
+
+            try {
+                // Get canvas elements
+                const canvas = document.getElementById('pixelCanvas');
+                console.log('Canvas found:', canvas);
+                
+                if (!canvas) {
+                    alert('Canvas nicht gefunden!');
+                    return;
+                }
+                
+                const ctx = canvas.getContext('2d');
+                console.log('Canvas width:', canvas.width, 'height:', canvas.height);
+                
+                // Fill with white
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                console.log('Canvas filled with white');
+                
+                // Save white canvas
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const pixelData = Array.from(imageData.data);
+                console.log('Image data length:', pixelData.length);
+                
+                try {
+                    const result = await window.storage.set('canvas-data', JSON.stringify(pixelData), true);
+                    console.log('Storage result:', result);
+                    alert('Leinwand erfolgreich gelöscht!');
+                } catch (storageError) {
+                    console.error('Storage error:', storageError);
+                    alert('Canvas wurde gelöscht aber konnte nicht gespeichert werden. Fehler: ' + storageError.message);
+                }
+            } catch (error) {
+                console.error('Clear error:', error);
+                alert('Fehler: ' + error.message);
+            }
+        }
+
+        document.getElementById('overlay').addEventListener('click', closeAdminPanel);
+
+        createColorPalette();
+        initCanvas().then(() => {
+            canvas.addEventListener('click', placePixel);
+        });
+    </script>
+</body>
+</html>
